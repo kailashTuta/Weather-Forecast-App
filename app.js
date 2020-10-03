@@ -13,6 +13,10 @@ weatherApp.config(function ($routeProvider) {
         .when('/forecast', {
             templateUrl: 'pages/forecast.html',
             controller: 'forecastController'
+        })
+        .when('/forecast/:days', {
+            templateUrl: 'pages/forecast.html',
+            controller: 'forecastController'
         });
 });
 
@@ -31,11 +35,12 @@ weatherApp.controller('homeController', ['$scope', 'cityService', function ($sco
     });
 }]);
 
-weatherApp.controller('forecastController', ['$scope', '$resource', 'cityService', function ($scope, $resource, cityService) {
+weatherApp.controller('forecastController', ['$scope', '$resource', '$routeParams', 'cityService', function ($scope, $resource, $routeParams, cityService) {
     $scope.city = cityService.city;
+    $scope.days = $routeParams.days || 2;
     $scope.weatherAPI = $resource("http://api.weatherapi.com/v1/forecast.json?key=a19e5510d499452094b24114200310", { callback: "JSON_CALLBACK" }, + '&' + { get: { method: "JSONP" } });
     // console.log($scope.weatherAPI);
 
-    $scope.weatherResult = $scope.weatherAPI.get({ q: $scope.city, days: 2 });
+    $scope.weatherResult = $scope.weatherAPI.get({ q: $scope.city, days: $scope.days });
     console.log($scope.weatherResult);
 }]);
