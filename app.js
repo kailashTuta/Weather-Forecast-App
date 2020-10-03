@@ -44,3 +44,20 @@ weatherApp.controller('forecastController', ['$scope', '$resource', '$routeParam
     $scope.weatherResult = $scope.weatherAPI.get({ q: $scope.city, days: $scope.days });
     console.log($scope.weatherResult);
 }]);
+
+// DIRECTIVES
+
+weatherApp.directive("weatherForecast", function () {
+    return {
+        restrict: 'E',
+        templateUrl: 'directives/weatherForecast.html',
+        replace: true,
+    };
+});
+weatherApp.directive("weatherReport", function () {
+    return {
+        restrict: 'E',
+        templateUrl: 'directives/weatherReport.html',
+        replace: true,
+    };
+});
