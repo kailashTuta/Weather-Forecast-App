@@ -22,7 +22,7 @@ weatherApp.config(function ($routeProvider) {
 
 //SERVICES
 weatherApp.service('cityService', function () {
-    this.city = "New York, NY";
+    this.city = "Eluru";
 });
 
 // CONTROLLER

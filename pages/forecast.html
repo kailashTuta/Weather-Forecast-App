@@ -1,13 +1,20 @@
-Forecast for {{city}}
+<p>
+    <a href="#/">Back to Search</a>
+</p>
 
+Forecast for {{city}}
+<hr>
+Days: <a href="#/forecast/1" ng-class="{'bg-primary': days === '1'}">1</a> | <a href="#/forecast/2"
+    ng-class="{'bg-primary': days === '2'}">2</a> | <a href="#/forecast/3" ng-class="{'bg-primary': days === '3'}">3</a>
+<hr>
 <div ng-repeat="w in weatherResult.forecast.forecastday">
     <div class="row">
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <h3 class="panel-heading">{{w.date | date:"MMM dd yyyy"}}</h3>
+                    <h3 class="panel-title">{{w.date | date:"MMM dd yyyy"}}</h3>
                 </div>
-                <div class="panel-title">
+                <div class="panel-body">
                     The max temperature is: {{w.day.maxtemp_c}}
                 </div>
             </div>
