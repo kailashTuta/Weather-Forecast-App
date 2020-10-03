@@ -2,51 +2,50 @@
     <a href="#/">Back to Search</a>
 </p>
 
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         <h2>{{weatherResult.location.name}},
             {{weatherResult.location.region}}, {{weatherResult.location.country}}</h2>
     </div>
-    <div class="panel-body">
-        <div class="col-md-6">
+    <div class="card-body">
+        <div class="container-fluid">
             <div class="row">
-                <div class="col-md-12">
-                    <h1>{{weatherResult.current.temp_c}}°C</h1>
-                    <img ng-src="{{weatherResult.current.condition.icon}}">
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="row">
-                    <div class="col-md-12">
-                        {{weatherResult.current.condition.text}} <br><br><br>
-                        Humidity: {{weatherResult.current.humidity}}% <br><br><br>
-                        Wind: {{weatherResult.current.wind_kph}} km/h
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h1 class="display-2">{{weatherResult.current.temp_c}}°C</h1>
+                            <img ng-src="{{weatherResult.current.condition.icon}}">
+                        </div>
                     </div>
                 </div>
-
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-md-12">
+                            {{weatherResult.current.condition.text}} <br><br><br>
+                            Humidity: {{weatherResult.current.humidity}}% <br><br><br>
+                            Wind: {{weatherResult.current.wind_kph}} km/h
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 <br>
 <hr>
 Forecast for {{city}}
 <hr>
-Days: <a href="#/forecast/1" ng-class="{'bg-primary': days === '1'}">1</a> | <a href="#/forecast/2"
-    ng-class="{'bg-primary': days === '2'}">2</a> | <a href="#/forecast/3" ng-class="{'bg-primary': days === '3'}">3</a>
+<a href="#/forecast/1" class="btn btn-dark" ng-class="{'bg-primary': days === '1'}">Today</a> | <a
+    href="#/forecast/2" class="btn btn-dark" ng-class="{'bg-primary': days === '2'}">Tommorow</a> | <a
+    href="#/forecast/3" class="btn btn-dark" ng-class="{'bg-primary': days === '3'}">Day After Tommorow</a>
 <hr>
 <div ng-repeat="w in weatherResult.forecast.forecastday">
     <div class="row">
         <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <h3 class="panel-title">{{w.date | date:"MMM dd yyyy"}}</h3>
-                </div>
-                <div class="panel-body">
-                    Maximum Temperature: {{w.day.maxtemp_c}}
-                </div>
+            <div class="card">
+                <div class="card-header">{{w.date | date:"MMM dd yyyy"}}</div>
+                <div class="card-body">Maximum Temperature: {{w.day.maxtemp_c}}</div>
             </div>
         </div>
     </div>
