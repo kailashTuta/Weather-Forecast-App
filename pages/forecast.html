@@ -2,6 +2,36 @@
     <a href="#/">Back to Search</a>
 </p>
 
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h2>{{weatherResult.location.name}},
+            {{weatherResult.location.region}}, {{weatherResult.location.country}}</h2>
+    </div>
+    <div class="panel-body">
+        <div class="col-md-6">
+            <div class="row">
+                <div class="col-md-12">
+                    <h1>{{weatherResult.current.temp_c}}°C</h1>
+                    <img ng-src="{{weatherResult.current.condition.icon}}">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="row">
+                    <div class="col-md-12">
+                        {{weatherResult.current.condition.text}} <br><br><br>
+                        Humidity: {{weatherResult.current.humidity}}% <br><br><br>
+                        Wind: {{weatherResult.current.wind_kph}} km/h
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+<hr>
 Forecast for {{city}}
 <hr>
 Days: <a href="#/forecast/1" ng-class="{'bg-primary': days === '1'}">1</a> | <a href="#/forecast/2"
@@ -15,7 +45,7 @@ Days: <a href="#/forecast/1" ng-class="{'bg-primary': days === '1'}">1</a> | <a 
                     <h3 class="panel-title">{{w.date | date:"MMM dd yyyy"}}</h3>
                 </div>
                 <div class="panel-body">
-                    The max temperature is: {{w.day.maxtemp_c}}
+                    Maximum Temperature: {{w.day.maxtemp_c}}
                 </div>
             </div>
         </div>
