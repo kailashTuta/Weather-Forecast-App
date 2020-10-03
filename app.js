@@ -33,9 +33,9 @@ weatherApp.controller('homeController', ['$scope', 'cityService', function ($sco
 
 weatherApp.controller('forecastController', ['$scope', '$resource', 'cityService', function ($scope, $resource, cityService) {
     $scope.city = cityService.city;
-    $scope.weatherAPI = $resource("http://api.weatherapi.com/v1/forecast.json?key=a19e5510d499452094b24114200310", { callback: "JSON_CALLBACK" }, + '&'+ { get: { method: "JSONP" }});
+    $scope.weatherAPI = $resource("http://api.weatherapi.com/v1/forecast.json?key=a19e5510d499452094b24114200310", { callback: "JSON_CALLBACK" }, + '&' + { get: { method: "JSONP" } });
     // console.log($scope.weatherAPI);
 
-    $scope.weatherResult = $scope.weatherAPI.get({ q: $scope.city });
+    $scope.weatherResult = $scope.weatherAPI.get({ q: $scope.city, days: 2 });
     console.log($scope.weatherResult);
 }]);
