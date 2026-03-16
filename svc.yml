@@ -7,6 +7,6 @@ spec:
   type: NodePort
   selector:
     app: weather
-  - ports:
-      port: 80
+  ports:
+    - port: 80
       targetPort: 80
