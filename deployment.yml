@@ -1,0 +1,20 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadate:
+  name: weather-forecast-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weather
+  template:
+    metadata:
+      labels:
+        app: weather
+    spec:
+      containers:
+        - name: cont-1
+          image: kailashtuta/weather-forecast-app:v1
+          ports:
+            containerPort: 80
