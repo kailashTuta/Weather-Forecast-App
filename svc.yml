@@ -4,9 +4,9 @@ kind: Service
 metadata:
   name: svc-1
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: weather
   ports:
-    - port: 80
-      targetPort: 80
+    -  port: 80
+       targetPort: 80
