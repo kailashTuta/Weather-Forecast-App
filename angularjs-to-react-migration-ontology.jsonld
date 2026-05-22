@@ -1,0 +1,956 @@
+{
+  "@context": {
+    "sro": "http://example.org/sro#",
+    "migration": "https://example.org/migration-ontology#",
+    "schema": "http://schema.org/",
+    "id": "@id",
+    "type": "@type",
+    "name": "schema:name",
+    "description": "schema:description",
+    "attributes": "sro:attributes",
+    "identityKey": "sro:identityKey",
+    "humanRef": "sro:humanRef",
+    "invariant": "sro:invariant",
+    "hasState": {
+      "@id": "sro:hasState",
+      "@type": "@id"
+    },
+    "initialState": {
+      "@id": "sro:initialState",
+      "@type": "@id"
+    },
+    "terminalStates": {
+      "@id": "sro:terminalStates",
+      "@type": "@id"
+    },
+    "relatesTo": {
+      "@id": "sro:relatesTo",
+      "@type": "@id"
+    },
+    "emitsEvent": {
+      "@id": "sro:emitsEvent",
+      "@type": "@id"
+    },
+    "from": {
+      "@id": "sro:from",
+      "@type": "@id"
+    },
+    "to": {
+      "@id": "sro:to",
+      "@type": "@id"
+    },
+    "precondition": "sro:precondition",
+    "postcondition": "sro:postcondition",
+    "Entity": "sro:Entity",
+    "Operation": "sro:Operation",
+    "State": "sro:State"
+  },
+  "@graph": [
+    {
+      "id": "migration:AngularJSModule",
+      "type": "Entity",
+      "name": "AngularJS Module",
+      "description": "An AngularJS module containing controllers, services, directives, and routes",
+      "identityKey": "moduleId: UUID",
+      "humanRef": "moduleName",
+      "attributes": {
+        "moduleId": "string",
+        "moduleName": "string",
+        "dependencies": "string[]",
+        "controllers": "string[]",
+        "services": "string[]",
+        "directives": "string[]",
+        "routes": "string[]",
+        "config": "string|null",
+        "complexity": "LOW|MEDIUM|HIGH|CRITICAL"
+      },
+      "invariant": [
+        "moduleName must be unique",
+        "moduleName must follow AngularJS naming conventions",
+        "At least one component (controller, service, or directive) must be defined"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InAnalysis",
+        "migration:InProgress",
+        "migration:CodeComplete",
+        "migration:Testing",
+        "migration:Verified",
+        "migration:Deployed"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Deployed"
+      ],
+      "relatesTo": [
+        "migration:ReactComponent",
+        "migration:Controller",
+        "migration:Service",
+        "migration:Directive",
+        "migration:MigrationRequirement"
+      ],
+      "emitsEvent": [
+        "migration:ModuleAnalyzed",
+        "migration:ModuleMigrated",
+        "migration:ModuleDeployed"
+      ]
+    },
+    {
+      "id": "migration:ReactComponent",
+      "type": "Entity",
+      "name": "React Component",
+      "description": "A React component that replaces AngularJS controllers or directives",
+      "identityKey": "componentId: UUID",
+      "humanRef": "componentName",
+      "attributes": {
+        "componentId": "string",
+        "componentName": "string",
+        "componentType": "FUNCTIONAL|CLASS|HOOK",
+        "props": "object",
+        "state": "object|null",
+        "hooks": "string[]",
+        "lifecycle": "string[]",
+        "migratedFrom": "string|null",
+        "filePath": "string"
+      },
+      "invariant": [
+        "componentName must be unique within the application",
+        "componentName must follow React naming conventions (PascalCase)",
+        "Functional components should use hooks for state management",
+        "Must have valid JSX return statement"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InProgress",
+        "migration:CodeComplete",
+        "migration:Testing",
+        "migration:Verified",
+        "migration:Deployed"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Deployed"
+      ],
+      "relatesTo": [
+        "migration:AngularJSModule",
+        "migration:Controller",
+        "migration:Directive",
+        "migration:TestCase"
+      ],
+      "emitsEvent": [
+        "migration:ComponentCreated",
+        "migration:ComponentTested",
+        "migration:ComponentDeployed"
+      ]
+    },
+    {
+      "id": "migration:Controller",
+      "type": "Entity",
+      "name": "AngularJS Controller",
+      "description": "An AngularJS controller managing view logic and data binding",
+      "identityKey": "controllerId: UUID",
+      "humanRef": "controllerName",
+      "attributes": {
+        "controllerId": "string",
+        "controllerName": "string",
+        "scope": "object",
+        "dependencies": "string[]",
+        "methods": "string[]",
+        "scopeVariables": "string[]",
+        "watches": "string[]"
+      },
+      "invariant": [
+        "controllerName must be unique",
+        "controllerName must end with 'Controller' or 'Ctrl'",
+        "Must have at least one method or scope variable"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InAnalysis",
+        "migration:InProgress",
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "relatesTo": [
+        "migration:ReactComponent",
+        "migration:Service",
+        "migration:AngularJSModule"
+      ],
+      "emitsEvent": [
+        "migration:ControllerAnalyzed",
+        "migration:ControllerMigrated"
+      ]
+    },
+    {
+      "id": "migration:Directive",
+      "type": "Entity",
+      "name": "AngularJS Directive",
+      "description": "An AngularJS directive for DOM manipulation and component creation",
+      "identityKey": "directiveId: UUID",
+      "humanRef": "directiveName",
+      "attributes": {
+        "directiveId": "string",
+        "directiveName": "string",
+        "restrict": "E|A|C|M",
+        "scope": "object|boolean",
+        "template": "string|null",
+        "templateUrl": "string|null",
+        "link": "string|null",
+        "controller": "string|null",
+        "require": "string|string[]|null",
+        "transclude": "boolean"
+      },
+      "invariant": [
+        "directiveName must be unique",
+        "directiveName must be in camelCase",
+        "Must have either template or templateUrl",
+        "restrict must be one of E, A, C, or M"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InAnalysis",
+        "migration:InProgress",
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "relatesTo": [
+        "migration:ReactComponent",
+        "migration:Controller",
+        "migration:AngularJSModule"
+      ],
+      "emitsEvent": [
+        "migration:DirectiveAnalyzed",
+        "migration:DirectiveMigrated"
+      ]
+    },
+    {
+      "id": "migration:Service",
+      "type": "Entity",
+      "name": "Service",
+      "description": "A service providing business logic and data access",
+      "identityKey": "serviceId: UUID",
+      "humanRef": "serviceName",
+      "attributes": {
+        "serviceId": "string",
+        "serviceName": "string",
+        "serviceType": "FACTORY|SERVICE|PROVIDER|VALUE|CONSTANT",
+        "methods": "string[]",
+        "dependencies": "string[]",
+        "isStateful": "boolean",
+        "apiEndpoints": "string[]"
+      },
+      "invariant": [
+        "serviceName must be unique",
+        "serviceName must follow naming conventions",
+        "Must have at least one method or value"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InAnalysis",
+        "migration:InProgress",
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Migrated",
+        "migration:Deprecated"
+      ],
+      "relatesTo": [
+        "migration:ReactComponent",
+        "migration:Controller",
+        "migration:CustomHook",
+        "migration:ContextAPI"
+      ],
+      "emitsEvent": [
+        "migration:ServiceAnalyzed",
+        "migration:ServiceMigrated"
+      ]
+    },
+    {
+      "id": "migration:CustomHook",
+      "type": "Entity",
+      "name": "Custom Hook",
+      "description": "A React custom hook that replaces AngularJS services or shared logic",
+      "identityKey": "hookId: UUID",
+      "humanRef": "hookName",
+      "attributes": {
+        "hookId": "string",
+        "hookName": "string",
+        "parameters": "object",
+        "returnValue": "object",
+        "dependencies": "string[]",
+        "migratedFrom": "string|null"
+      },
+      "invariant": [
+        "hookName must start with 'use'",
+        "hookName must be unique",
+        "Must follow React hooks rules"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InProgress",
+        "migration:CodeComplete",
+        "migration:Testing",
+        "migration:Deployed"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Deployed"
+      ],
+      "relatesTo": [
+        "migration:Service",
+        "migration:ReactComponent"
+      ]
+    },
+    {
+      "id": "migration:Route",
+      "type": "Entity",
+      "name": "Route Configuration",
+      "description": "Route configuration for navigation in both AngularJS and React",
+      "identityKey": "routeId: UUID",
+      "humanRef": "path",
+      "attributes": {
+        "routeId": "string",
+        "path": "string",
+        "angularJSController": "string|null",
+        "angularJSTemplate": "string|null",
+        "reactComponent": "string|null",
+        "reactLoader": "string|null",
+        "params": "object|null",
+        "guards": "string[]"
+      },
+      "invariant": [
+        "path must be unique",
+        "path must start with /",
+        "Must have either AngularJS or React configuration"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InProgress",
+        "migration:Migrated",
+        "migration:Deployed"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Deployed"
+      ],
+      "relatesTo": [
+        "migration:Controller",
+        "migration:ReactComponent"
+      ]
+    },
+    {
+      "id": "migration:StateManagement",
+      "type": "Entity",
+      "name": "State Management",
+      "description": "State management approach for the application",
+      "identityKey": "stateId: UUID",
+      "humanRef": "stateName",
+      "attributes": {
+        "stateId": "string",
+        "stateName": "string",
+        "angularJSApproach": "$scope|$rootScope|service|factory",
+        "reactApproach": "useState|useReducer|Redux|Context|Zustand|MobX",
+        "complexity": "LOW|MEDIUM|HIGH",
+        "dataFlow": "string"
+      },
+      "invariant": [
+        "stateName must be unique",
+        "Must specify both AngularJS and React approaches"
+      ],
+      "hasState": [
+        "migration:NotStarted",
+        "migration:InAnalysis",
+        "migration:InProgress",
+        "migration:Migrated"
+      ],
+      "initialState": "migration:NotStarted",
+      "terminalStates": [
+        "migration:Migrated"
+      ],
+      "relatesTo": [
+        "migration:Service",
+        "migration:CustomHook",
+        "migration:ContextAPI"
+      ]
+    },
+    {
+      "id": "migration:MigrationRequirement",
+      "type": "Entity",
+      "name": "Migration Requirement",
+      "description": "A requirement specific to the AngularJS to React migration",
+      "identityKey": "requirementId: UUID",
+      "humanRef": "requirementCode",
+      "attributes": {
+        "requirementId": "string",
+        "requirementCode": "string",
+        "name": "string",
+        "description": "string",
+        "category": "FUNCTIONAL|NON_FUNCTIONAL|SECURITY|PERFORMANCE|COMPATIBILITY",
+        "priority": "MUST|SHOULD|COULD|WONT",
+        "status": "DRAFT|APPROVED|IMPLEMENTED|VERIFIED|REJECTED",
+        "acceptanceCriteria": "string[]",
+        "angularJSComponent": "string|null",
+        "reactComponent": "string|null"
+      },
+      "invariant": [
+        "requirementCode must be unique",
+        "requirementCode must follow format MIG-XXX",
+        "priority must be one of MoSCoW values",
+        "Must have at least one acceptance criterion"
+      ],
+      "hasState": [
+        "migration:RequirementDraft",
+        "migration:RequirementApproved",
+        "migration:RequirementImplemented",
+        "migration:RequirementVerified",
+        "migration:RequirementRejected"
+      ],
+      "initialState": "migration:RequirementDraft",
+      "terminalStates": [
+        "migration:RequirementVerified",
+        "migration:RequirementRejected"
+      ],
+      "relatesTo": [
+        "migration:Stakeholder",
+        "migration:TestCase",
+        "migration:AngularJSModule",
+        "migration:ReactComponent"
+      ],
+      "emitsEvent": [
+        "migration:RequirementApproved",
+        "migration:RequirementImplemented",
+        "migration:RequirementVerified"
+      ]
+    },
+    {
+      "id": "migration:Stakeholder",
+      "type": "Entity",
+      "name": "Stakeholder",
+      "description": "A person or team involved in the migration project",
+      "identityKey": "stakeholderId: UUID",
+      "humanRef": "name",
+      "attributes": {
+        "stakeholderId": "string",
+        "name": "string",
+        "email": "string",
+        "role": "FRONTEND_DEVELOPER|ARCHITECT|QA_ENGINEER|PRODUCT_OWNER|DEVOPS_ENGINEER",
+        "expertise": "object",
+        "responsibilities": "string[]",
+        "assignedComponents": "string[]"
+      },
+      "invariant": [
+        "email must be unique",
+        "email must be valid format",
+        "role must be defined"
+      ],
+      "relatesTo": [
+        "migration:MigrationRequirement",
+        "migration:AngularJSModule",
+        "migration:ReactComponent",
+        "migration:Risk"
+      ]
+    },
+    {
+      "id": "migration:TestCase",
+      "type": "Entity",
+      "name": "Test Case",
+      "description": "A test case for verifying migration correctness",
+      "identityKey": "testCaseId: UUID",
+      "humanRef": "testCaseCode",
+      "attributes": {
+        "testCaseId": "string",
+        "testCaseCode": "string",
+        "name": "string",
+        "description": "string",
+        "testType": "UNIT|INTEGRATION|E2E|PERFORMANCE|SECURITY|ACCESSIBILITY",
+        "priority": "HIGH|MEDIUM|LOW",
+        "preconditions": "string[]",
+        "steps": "string[]",
+        "expectedResult": "string",
+        "angularJSTest": "string|null",
+        "reactTest": "string|null",
+        "testFramework": "string",
+        "coverage": "number",
+        "status": "NOT_RUN|PASSED|FAILED|BLOCKED|SKIPPED"
+      },
+      "invariant": [
+        "testCaseCode must be unique",
+        "testCaseCode must follow format TEST-MIG-XXX",
+        "Must have at least one test step",
+        "coverage must be between 0 and 100"
+      ],
+      "hasState": [
+        "migration:TestNotRun",
+        "migration:TestPassed",
+        "migration:TestFailed",
+        "migration:TestBlocked"
+      ],
+      "initialState": "migration:TestNotRun",
+      "terminalStates": [
+        "migration:TestPassed"
+      ],
+      "relatesTo": [
+        "migration:MigrationRequirement",
+        "migration:ReactComponent",
+        "migration:AngularJSModule"
+      ]
+    },
+    {
+      "id": "migration:Risk",
+      "type": "Entity",
+      "name": "Migration Risk",
+      "description": "A risk identified during the migration process",
+      "identityKey": "riskId: UUID",
+      "humanRef": "riskCode",
+      "attributes": {
+        "riskId": "string",
+        "riskCode": "string",
+        "description": "string",
+        "category": "TECHNICAL|SCHEDULE|RESOURCE|QUALITY|BUSINESS",
+        "probability": "LOW|MEDIUM|HIGH",
+        "impact": "LOW|MEDIUM|HIGH|CRITICAL",
+        "mitigationStrategy": "string",
+        "contingencyPlan": "string",
+        "status": "IDENTIFIED|ASSESSED|MITIGATED|CLOSED"
+      },
+      "invariant": [
+        "riskCode must be unique",
+        "riskCode must follow format RISK-MIG-XXX",
+        "Must have mitigation strategy",
+        "Must have owner assigned"
+      ],
+      "hasState": [
+        "migration:RiskIdentified",
+        "migration:RiskAssessed",
+        "migration:RiskMitigated",
+        "migration:RiskClosed"
+      ],
+      "initialState": "migration:RiskIdentified",
+      "terminalStates": [
+        "migration:RiskClosed"
+      ],
+      "relatesTo": [
+        "migration:Stakeholder",
+        "migration:MigrationRequirement"
+      ]
+    },
+    {
+      "id": "migration:DeprecatedFeature",
+      "type": "Entity",
+      "name": "Deprecated AngularJS Feature",
+      "description": "An AngularJS feature that is deprecated and needs migration",
+      "identityKey": "featureId: UUID",
+      "humanRef": "featureName",
+      "attributes": {
+        "featureId": "string",
+        "featureName": "string",
+        "description": "string",
+        "deprecationReason": "string",
+        "lastSupportedVersion": "string",
+        "reactEquivalent": "string",
+        "conversionGuide": "string",
+        "codeExamples": "object",
+        "breakingChanges": "string[]",
+        "migrationEffort": "LOW|MEDIUM|HIGH|CRITICAL"
+      },
+      "invariant": [
+        "featureName must be unique",
+        "Must have React equivalent defined",
+        "Must have conversion guide"
+      ],
+      "relatesTo": [
+        "migration:Controller",
+        "migration:Directive",
+        "migration:Service",
+        "migration:ReactComponent"
+      ]
+    },
+    {
+      "id": "migration:CompatibilityConstraint",
+      "type": "Entity",
+      "name": "Compatibility Constraint",
+      "description": "A constraint related to browser, library, or platform compatibility",
+      "identityKey": "constraintId: UUID",
+      "humanRef": "constraintCode",
+      "attributes": {
+        "constraintId": "string",
+        "constraintCode": "string",
+        "description": "string",
+        "type": "BROWSER|LIBRARY|API|PLATFORM|TOOLING",
+        "angularJSRequirement": "string",
+        "reactRequirement": "string",
+        "conflictResolution": "string|null",
+        "workaround": "string|null"
+      },
+      "invariant": [
+        "constraintCode must be unique",
+        "Must specify both AngularJS and React requirements"
+      ],
+      "relatesTo": [
+        "migration:AngularJSModule",
+        "migration:ReactComponent",
+        "migration:Risk"
+      ]
+    },
+    {
+      "id": "migration:MapsTo",
+      "type": "Operation",
+      "name": "MapsTo",
+      "description": "Defines mapping between AngularJS component and React component",
+      "from": "migration:Controller|migration:Directive|migration:Service",
+      "to": "migration:ReactComponent|migration:CustomHook",
+      "precondition": [
+        "AngularJS component must exist",
+        "AngularJS component must be analyzed",
+        "React equivalent must be defined"
+      ],
+      "postcondition": [
+        "Mapping relationship is established",
+        "Conversion strategy is documented",
+        "Migration status is updated"
+      ]
+    },
+    {
+      "id": "migration:ReplacedBy",
+      "type": "Operation",
+      "name": "ReplacedBy",
+      "description": "Indicates that an AngularJS component is replaced by a React component",
+      "from": "migration:Controller|migration:Directive|migration:Service",
+      "to": "migration:ReactComponent|migration:CustomHook",
+      "precondition": [
+        "AngularJS component must be in Migrated state",
+        "React component must be in Deployed state",
+        "All tests must pass"
+      ],
+      "postcondition": [
+        "AngularJS component is marked as Deprecated",
+        "React component is active",
+        "Routing is updated if applicable"
+      ]
+    },
+    {
+      "id": "migration:DependsOn",
+      "type": "Operation",
+      "name": "DependsOn",
+      "description": "Defines dependency between components",
+      "from": "migration:AngularJSModule|migration:ReactComponent|migration:Service",
+      "to": "migration:Service|migration:CustomHook|migration:AngularJSModule",
+      "precondition": [
+        "Both components must exist",
+        "No circular dependencies allowed",
+        "Dependency must be documented"
+      ],
+      "postcondition": [
+        "Dependency relationship is recorded",
+        "Migration order is determined",
+        "Impact analysis is updated"
+      ]
+    },
+    {
+      "id": "migration:VerifiedBy",
+      "type": "Operation",
+      "name": "VerifiedBy",
+      "description": "Links a requirement or component to test cases that verify it",
+      "from": "migration:MigrationRequirement|migration:ReactComponent",
+      "to": "migration:TestCase",
+      "precondition": [
+        "Requirement or component must be implemented",
+        "Test case must exist",
+        "Test case must be relevant"
+      ],
+      "postcondition": [
+        "Verification relationship is established",
+        "Test coverage is tracked",
+        "Quality metrics are updated"
+      ]
+    },
+    {
+      "id": "migration:Implements",
+      "type": "Operation",
+      "name": "Implements",
+      "description": "Links a component to the requirements it implements",
+      "from": "migration:ReactComponent|migration:AngularJSModule",
+      "to": "migration:MigrationRequirement",
+      "precondition": [
+        "Component must exist",
+        "Requirement must be approved",
+        "Implementation must be planned"
+      ],
+      "postcondition": [
+        "Implementation relationship is recorded",
+        "Requirement status is updated",
+        "Traceability is maintained"
+      ]
+    },
+    {
+      "id": "migration:AssignedTo",
+      "type": "Operation",
+      "name": "AssignedTo",
+      "description": "Assigns migration work to a stakeholder",
+      "from": "migration:AngularJSModule|migration:ReactComponent|migration:MigrationRequirement",
+      "to": "migration:Stakeholder",
+      "precondition": [
+        "Work item must exist",
+        "Stakeholder must exist",
+        "Stakeholder must have required expertise"
+      ],
+      "postcondition": [
+        "Assignment is recorded",
+        "Stakeholder workload is updated",
+        "Responsibility is clear"
+      ]
+    },
+    {
+      "id": "migration:Mitigates",
+      "type": "Operation",
+      "name": "Mitigates",
+      "description": "Links a mitigation strategy to a risk",
+      "from": "migration:MigrationRequirement|migration:TestCase",
+      "to": "migration:Risk",
+      "precondition": [
+        "Risk must be identified",
+        "Mitigation strategy must be defined",
+        "Strategy must be feasible"
+      ],
+      "postcondition": [
+        "Mitigation relationship is established",
+        "Risk status is updated",
+        "Risk level may be reduced"
+      ]
+    },
+    {
+      "id": "migration:ConflictsWith",
+      "type": "Operation",
+      "name": "ConflictsWith",
+      "description": "Identifies compatibility conflicts between components",
+      "from": "migration:AngularJSModule|migration:ReactComponent",
+      "to": "migration:CompatibilityConstraint",
+      "precondition": [
+        "Both components must exist",
+        "Conflict must be documented",
+        "Impact must be assessed"
+      ],
+      "postcondition": [
+        "Conflict is recorded",
+        "Resolution strategy is required",
+        "Migration plan is adjusted"
+      ]
+    },
+    {
+      "id": "migration:NotStarted",
+      "type": "State",
+      "name": "Not Started",
+      "description": "Migration work has not yet begun"
+    },
+    {
+      "id": "migration:InAnalysis",
+      "type": "State",
+      "name": "In Analysis",
+      "description": "Component is being analyzed for migration complexity and strategy"
+    },
+    {
+      "id": "migration:InProgress",
+      "type": "State",
+      "name": "In Progress",
+      "description": "Migration work is actively being performed"
+    },
+    {
+      "id": "migration:CodeComplete",
+      "type": "State",
+      "name": "Code Complete",
+      "description": "Migration code is complete but not yet tested"
+    },
+    {
+      "id": "migration:Testing",
+      "type": "State",
+      "name": "Testing",
+      "description": "Component is undergoing testing"
+    },
+    {
+      "id": "migration:Verified",
+      "type": "State",
+      "name": "Verified",
+      "description": "Component has been tested and verified"
+    },
+    {
+      "id": "migration:Deployed",
+      "type": "State",
+      "name": "Deployed",
+      "description": "Component has been deployed to production"
+    },
+    {
+      "id": "migration:Migrated",
+      "type": "State",
+      "name": "Migrated",
+      "description": "Component has been successfully migrated"
+    },
+    {
+      "id": "migration:Deprecated",
+      "type": "State",
+      "name": "Deprecated",
+      "description": "AngularJS component is deprecated and replaced"
+    },
+    {
+      "id": "migration:RequirementDraft",
+      "type": "State",
+      "name": "Requirement Draft",
+      "description": "Requirement is being drafted"
+    },
+    {
+      "id": "migration:RequirementApproved",
+      "type": "State",
+      "name": "Requirement Approved",
+      "description": "Requirement has been approved for implementation"
+    },
+    {
+      "id": "migration:RequirementImplemented",
+      "type": "State",
+      "name": "Requirement Implemented",
+      "description": "Requirement has been implemented"
+    },
+    {
+      "id": "migration:RequirementVerified",
+      "type": "State",
+      "name": "Requirement Verified",
+      "description": "Requirement implementation has been verified"
+    },
+    {
+      "id": "migration:RequirementRejected",
+      "type": "State",
+      "name": "Requirement Rejected",
+      "description": "Requirement has been rejected"
+    },
+    {
+      "id": "migration:TestNotRun",
+      "type": "State",
+      "name": "Test Not Run",
+      "description": "Test has not been executed yet"
+    },
+    {
+      "id": "migration:TestPassed",
+      "type": "State",
+      "name": "Test Passed",
+      "description": "Test has passed successfully"
+    },
+    {
+      "id": "migration:TestFailed",
+      "type": "State",
+      "name": "Test Failed",
+      "description": "Test has failed"
+    },
+    {
+      "id": "migration:TestBlocked",
+      "type": "State",
+      "name": "Test Blocked",
+      "description": "Test is blocked by dependencies"
+    },
+    {
+      "id": "migration:RiskIdentified",
+      "type": "State",
+      "name": "Risk Identified",
+      "description": "Risk has been identified"
+    },
+    {
+      "id": "migration:RiskAssessed",
+      "type": "State",
+      "name": "Risk Assessed",
+      "description": "Risk has been assessed for probability and impact"
+    },
+    {
+      "id": "migration:RiskMitigated",
+      "type": "State",
+      "name": "Risk Mitigated",
+      "description": "Risk mitigation strategy has been implemented"
+    },
+    {
+      "id": "migration:RiskClosed",
+      "type": "State",
+      "name": "Risk Closed",
+      "description": "Risk has been resolved or is no longer relevant"
+    },
+    {
+      "id": "migration:ModuleAnalyzed",
+      "type": "State",
+      "name": "Module Analyzed",
+      "description": "AngularJS module has been analyzed"
+    },
+    {
+      "id": "migration:ModuleMigrated",
+      "type": "State",
+      "name": "Module Migrated",
+      "description": "AngularJS module has been migrated to React"
+    },
+    {
+      "id": "migration:ModuleDeployed",
+      "type": "State",
+      "name": "Module Deployed",
+      "description": "Migrated module has been deployed"
+    },
+    {
+      "id": "migration:ComponentCreated",
+      "type": "State",
+      "name": "Component Created",
+      "description": "React component has been created"
+    },
+    {
+      "id": "migration:ComponentTested",
+      "type": "State",
+      "name": "Component Tested",
+      "description": "React component has been tested"
+    },
+    {
+      "id": "migration:ComponentDeployed",
+      "type": "State",
+      "name": "Component Deployed",
+      "description": "React component has been deployed"
+    },
+    {
+      "id": "migration:ControllerAnalyzed",
+      "type": "State",
+      "name": "Controller Analyzed",
+      "description": "AngularJS controller has been analyzed"
+    },
+    {
+      "id": "migration:ControllerMigrated",
+      "type": "State",
+      "name": "Controller Migrated",
+      "description": "AngularJS controller has been migrated"
+    },
+    {
+      "id": "migration:DirectiveAnalyzed",
+      "type": "State",
+      "name": "Directive Analyzed",
+      "description": "AngularJS directive has been analyzed"
+    },
+    {
+      "id": "migration:DirectiveMigrated",
+      "type": "State",
+      "name": "Directive Migrated",
+      "description": "AngularJS directive has been migrated"
+    },
+    {
+      "id": "migration:ServiceAnalyzed",
+      "type": "State",
+      "name": "Service Analyzed",
+      "description": "Service has been analyzed"
+    },
+    {
+      "id": "migration:ServiceMigrated",
+      "type": "State",
+      "name": "Service Migrated",
+      "description": "Service has been migrated"
+    }
+  ]
+}

@@ -1,19 +1,36 @@
 <p>
     <a href="#/">Back to Search</a>
 </p>
-<weather-report></weather-report>
-<br>
-<hr>
-Forecast for {{city}}
-<hr>
-<a href="#/forecast/1" class="btn btn-dark" ng-class="{'bg-primary': days === '1'}">Today</a> | <a href="#/forecast/2"
-    class="btn btn-dark" ng-class="{'bg-primary': days === '2'}">Tommorow</a> | <a href="#/forecast/3"
-    class="btn btn-dark" ng-class="{'bg-primary': days === '3'}">Day After Tommorow</a>
-<hr>
-<div ng-repeat="w in weatherResult.forecast.forecastday">
-    <div class="row">
-        <div class="col-md-12">
-            <weather-forecast></weather-forecast>
+
+<div ng-if="loading" class="text-center">
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+    <p>Loading weather data...</p>
+</div>
+
+<div ng-if="error" class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">Error!</h4>
+    <p>{{error}}</p>
+    <hr>
+    <a href="#/" class="btn btn-primary">Go Back to Home</a>
+</div>
+
+<div ng-if="!loading && !error">
+    <weather-report></weather-report>
+    <br>
+    <hr>
+    Forecast for {{city}}
+    <hr>
+    <a href="#/forecast/1" class="btn btn-dark" ng-class="{'bg-primary': days === 1}">Today</a> |
+    <a href="#/forecast/2" class="btn btn-dark" ng-class="{'bg-primary': days === 2}">Tomorrow</a> |
+    <a href="#/forecast/3" class="btn btn-dark" ng-class="{'bg-primary': days === 3}">Day After Tomorrow</a>
+    <hr>
+    <div ng-repeat="w in weatherResult.forecast.forecastday">
+        <div class="row">
+            <div class="col-md-12">
+                <weather-forecast></weather-forecast>
+            </div>
         </div>
     </div>
 </div>
