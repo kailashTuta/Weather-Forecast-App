@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-forecast-app-green
+  labels:
+    app: weather
+    version: green
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weather
+      version: green
+  template:
+    metadata:
+      labels:
+        app: weather
+        version: green
+    spec:
+      containers:
+        - name: weather-container
+          image: kailashtuta/weather-forecast-app:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

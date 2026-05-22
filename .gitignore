@@ -57,8 +57,6 @@ yarn-error.log*
 # Output of 'npm pack'
 *.tgz
 
-# dotenv environment variable files
-.env*
 
 # parcel-bundler cache
 .parcel-cache
