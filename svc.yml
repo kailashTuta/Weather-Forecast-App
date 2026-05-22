@@ -1,12 +1,57 @@
 ---
+# Main Service - Routes traffic to active deployment (initially blue)
 apiVersion: v1
 kind: Service
 metadata:
-  name: svc-1
+  name: weather-forecast-service
+  labels:
+    app: weather
 spec:
   type: LoadBalancer
   selector:
     app: weather
+    version: blue  # Switch to 'green' during deployment
   ports:
-    -  port: 80
-       targetPort: 80
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+# Blue Service - Direct access to blue deployment (for testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-forecast-service-blue
+  labels:
+    version: blue
+spec:
+  type: ClusterIP
+  selector:
+    app: weather
+    version: blue
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+
+---
+# Green Service - Direct access to green deployment (for testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-forecast-service-green
+  labels:
+    version: green
+spec:
+  type: ClusterIP
+  selector:
+    app: weather
+    version: green
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
