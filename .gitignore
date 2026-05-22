@@ -10,6 +10,11 @@ yarn-error.log*
 react-app/build/
 react-app/dist/
 
+# React app build / caches
+react-app/.env.local
+react-app/.cache/
+react-app/coverage/
+
 # Environment variables
 .env
 
