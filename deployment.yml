@@ -1,20 +1,76 @@
 ---
+# Blue-Green Deployment Configuration
+# Blue Deployment (Active)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: weather-forecast-app
+  name: weather-forecast-app-blue
+  labels:
+    version: blue
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: weather
+      version: blue
   template:
     metadata:
       labels:
         app: weather
+        version: blue
     spec:
       containers:
         - name: cont-1
           image: kailashtuta/weather-forecast-app:v1
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Green Deployment (Standby)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-forecast-app-green
+  labels:
+    version: green
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: weather
+      version: green
+  template:
+    metadata:
+      labels:
+        app: weather
+        version: green
+    spec:
+      containers:
+        - name: cont-1
+          image: kailashtuta/weather-forecast-app:v1
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
