@@ -38,5 +38,5 @@ The `svc.yaml` file contains:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/kailashTuta/argocd-weather.git
+git clone https://github.com/kailashTuta/ArgoCD-Weather-Forecast-Website.git
 cd argocd-weather
