@@ -7,6 +7,11 @@ on:
     branches: ["bob"]
   workflow_dispatch:
 
+permissions:
+  checks: write          # dorny/test-reporter needs this to create Check Runs
+  pull-requests: write   # allows test-reporter to annotate PRs
+  contents: read
+
 env:
   NODE_VERSION: "20"
   PYTHON_VERSION: "3.11"
@@ -26,17 +31,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: react-app/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run React unit tests
         env:
@@ -51,7 +56,7 @@ jobs:
         run: npm run build
 
       - name: Upload build artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: react-build
           path: react-app/build/
@@ -69,10 +74,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -82,7 +87,7 @@ jobs:
         run: pip install --upgrade pip && pip install -r requirements.txt
 
       - name: Install Chrome and ChromeDriver
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v1.7.2
         with:
           chrome-version: stable
 
@@ -110,7 +115,7 @@ jobs:
 
       - name: Upload dry-run reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: dryrun-reports
           path: reports/
@@ -149,21 +154,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       # ── Download the pre-built React bundle ──────────────────────────────────
       - name: Download React build artefact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: react-build
           path: react-app/build/
 
       # ── Start the React app (browser suites only) ────────────────────────────
-      # serve handles SPA fallback via -s (single-page mode), so React Router
-      # client-side routes (/, /forecast, unknown) all resolve correctly.
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         if: matrix.suite.browser_required
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -171,9 +174,6 @@ jobs:
         if: matrix.suite.browser_required
         run: npm install -g serve
 
-      # Run serve as a detached background service using nohup so it outlives
-      # this step. The subsequent health-check step waits until port 3000 accepts
-      # connections before any test step runs.
       - name: Start React app (background)
         if: matrix.suite.browser_required
         run: |
@@ -199,14 +199,12 @@ jobs:
           exit 1
 
       # ── Start virtual display (browser suites only) ──────────────────────────
-      # Xvfb must be started and confirmed ready BEFORE Chrome launches.
       - name: Start Xvfb virtual display
         if: matrix.suite.browser_required
         run: |
           sudo apt-get install -y xvfb
           Xvfb :99 -screen 0 1920x1080x24 -ac &
           echo $! > /tmp/xvfb.pid
-          # Wait until the display socket exists
           for i in $(seq 1 15); do
             [ -e /tmp/.X11-unix/X99 ] && echo "✓ Xvfb ready" && break
             sleep 1
@@ -214,7 +212,7 @@ jobs:
 
       # ── Python + Robot Framework ─────────────────────────────────────────────
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -226,7 +224,7 @@ jobs:
       # ── Chrome (browser suites only) ─────────────────────────────────────────
       - name: Install Chrome and ChromeDriver
         if: matrix.suite.browser_required
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v1.7.2
         with:
           chrome-version: stable
 
@@ -245,10 +243,20 @@ jobs:
             --pythonpath libraries \
             ${{ matrix.suite.dir }}/
 
-      # ── Publish results (always, even on test failure) ────────────────────────
+      # ── Publish Robot results as a GitHub Check (visible in the UI) ──────────
+      - name: Publish test results — ${{ matrix.suite.name }}
+        if: always()
+        uses: dorny/test-reporter@v1.9.1
+        with:
+          name: "Robot Results — ${{ matrix.suite.name }}"
+          path: reports/${{ matrix.suite.tag }}/output_${{ matrix.suite.tag }}.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # ── Upload raw artefact (HTML log + report for detailed inspection) ───────
       - name: Upload test reports — ${{ matrix.suite.name }}
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: robot-report-${{ matrix.suite.tag }}
           path: reports/${{ matrix.suite.tag }}/
@@ -272,10 +280,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -283,24 +291,32 @@ jobs:
         run: pip install robotframework
 
       - name: Download all Robot report artefacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           pattern: robot-report-*
           path: reports/all/
           merge-multiple: false
 
+      # Each artefact unpacks into reports/all/robot-report-<tag>/reports/<tag>/
+      # Find all output XMLs regardless of nesting depth.
       - name: Merge output XMLs with rebot
         run: |
+          mapfile -t xmls < <(find reports/all -name "output_*.xml")
+          if [ ${#xmls[@]} -eq 0 ]; then
+            echo "No output XMLs found — skipping merge"
+            exit 0
+          fi
           python -m robot.rebot \
             --outputdir reports/combined \
             --log     combined_log.html \
             --report  combined_report.html \
             --output  combined_output.xml \
             --merge \
-            reports/all/robot-report-*/output_*.xml 2>/dev/null || true
+            "${xmls[@]}"
 
       - name: Upload combined report
-        uses: actions/upload-artifact@v4
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: robot-combined-report
           path: reports/combined/
