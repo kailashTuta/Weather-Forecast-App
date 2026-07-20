@@ -1,0 +1,16 @@
+name: Ansible - Install Docker and Git
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ansible:
+    name: Run Ansible Playbook
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Ansible playbook
+        run: ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml ansible/playbook.yml

@@ -1,0 +1,45 @@
+---
+- hosts: aws_ec2
+  become: yes
+  connection: ssh
+  user: ec2-user
+
+  vars:
+    ansible_ssh_private_key_file: "/etc/ansible/Docker-RSA.pem"
+    ansible_ssh_user: "ec2-user"
+
+  tasks:
+    # ── Git ────────────────────────────────────────────────────────────────────
+    - name: Install Git
+      dnf:
+        name: git
+        state: present
+
+    # ── Docker ─────────────────────────────────────────────────────────────────
+    - name: Add Docker CE repository
+      command:
+        cmd: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Install Docker CE
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
