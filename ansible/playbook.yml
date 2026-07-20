@@ -16,11 +16,17 @@
         state: present
 
     # ── Docker ─────────────────────────────────────────────────────────────────
-    - name: Add Docker CE repository
-      command:
-        cmd: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+    - name: Remove old Docker CE repo if present
+      file:
+        path: /etc/yum.repos.d/docker-ce.repo
+        state: absent
+
+    - name: Add Docker CE repository for Amazon Linux 2023
+      shell: |
+        dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+        sed -i 's/$releasever/9/g' /etc/yum.repos.d/docker-ce.repo
       args:
-        creates: /etc/yum.repos.d/docker-ce.repo
+        executable: /bin/bash
 
     - name: Install Docker CE
       dnf:
@@ -31,6 +37,7 @@
           - docker-buildx-plugin
           - docker-compose-plugin
         state: present
+        disable_gpg_check: yes
 
     - name: Start and enable Docker service
       service:
