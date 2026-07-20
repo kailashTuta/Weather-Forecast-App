@@ -36,7 +36,7 @@ jobs:
           cache-dependency-path: react-app/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run React unit tests
         env:
@@ -64,6 +64,8 @@ jobs:
     name: "Build Test Automation Framework"
     runs-on: ubuntu-latest
     needs: build-react-app
+    env:
+      REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
 
     steps:
       - name: Checkout repository
@@ -85,8 +87,6 @@ jobs:
           chrome-version: stable
 
       - name: Validate Robot Framework resource files (dry-run)
-        env:
-          REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
         # --dryrun parses all suites without executing any keyword
         run: |
           python -m robot \
@@ -100,8 +100,6 @@ jobs:
             tests/
 
       - name: Validate Robot Framework API tests (dry-run)
-        env:
-          REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
         run: |
           python -m robot \
             --dryrun \
@@ -125,6 +123,8 @@ jobs:
     name: "Execute Test Cases — ${{ matrix.suite.name }}"
     runs-on: ubuntu-latest
     needs: [build-react-app, build-test-automation]
+    env:
+      REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
 
     strategy:
       fail-fast: false
@@ -233,7 +233,6 @@ jobs:
       # ── Execute tests ────────────────────────────────────────────────────────
       - name: Run ${{ matrix.suite.name }}
         env:
-          REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
           DISPLAY: ":99"
         run: |
           python -m robot \

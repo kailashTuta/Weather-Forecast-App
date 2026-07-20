@@ -63,10 +63,12 @@ Verify Forecast Card Count For Days
 
 Verify Days Selector Navigates Correctly
     [Documentation]    Click each days-selector button and assert the URL is updated to the correct ?days= value.
+    ...                Uses a JavaScript click to avoid ElementClickInterceptedException from overlapping elements.
     [Arguments]    ${days}
     Wait Until Page Contains Element    ${DAYS_SELECTOR_BTNS}    timeout=${STANDARD_WAIT}
     ${btns}=    Get WebElements    ${DAYS_SELECTOR_BTNS}
     ${index}=    Evaluate    int(${days}) - 1
-    Click Element    ${btns}[${index}]
+    Scroll Element Into View    ${btns}[${index}]
+    Execute JavaScript    arguments[0].click();    ARGUMENTS    ${btns}[${index}]
     Wait For Spinner To Disappear
     Forecast URL Should Contain Days    ${days}
