@@ -1,16 +1,6 @@
 name: Terraform IaC
 
 on:
-  push:
-    branches:
-      - bob
-    paths:
-      - "terraform/**"
-  pull_request:
-    branches:
-      - bob
-    paths:
-      - "terraform/**"
   workflow_dispatch:
 
 concurrency:
@@ -37,5 +27,4 @@ jobs:
         run: terraform plan -input=false -out=tfplan -var-file=terraform.tfvars
 
       - name: Terraform Apply
-        if: (github.ref == 'refs/heads/bob' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
         run: terraform apply -input=false -auto-approve tfplan
