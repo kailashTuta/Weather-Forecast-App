@@ -246,16 +246,25 @@ jobs:
             --pythonpath libraries \
             ${{ matrix.suite.dir }}/
 
-      # ── Publish Robot results as a native GitHub Check ───────────────────────
-      # dorny/test-reporter v1 has built-in robot-framework reporter that parses
-      # Robot's output.xml directly — correct test names, statuses and durations.
+      # ── Convert Robot output.xml → JUnit XML for dorny/test-reporter ─────────
+      # dorny/test-reporter@v1 only supports java-junit, not robot-framework.
+      # robot.rebot --xunit produces a valid JUnit XML from the Robot output.
+      - name: Convert Robot output to JUnit XML — ${{ matrix.suite.name }}
+        if: always()
+        run: |
+          python -m robot.rebot \
+            --nostatusrc \
+            --xunit reports/${{ matrix.suite.tag }}/junit_${{ matrix.suite.tag }}.xml \
+            reports/${{ matrix.suite.tag }}/output_${{ matrix.suite.tag }}.xml
+
+      # ── Publish results as a GitHub Check (visible in the UI) ────────────────
       - name: Publish test results — ${{ matrix.suite.name }}
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: "Robot Results — ${{ matrix.suite.name }}"
-          path: reports/${{ matrix.suite.tag }}/output_${{ matrix.suite.tag }}.xml
-          reporter: robot-framework
+          path: reports/${{ matrix.suite.tag }}/junit_${{ matrix.suite.tag }}.xml
+          reporter: java-junit
           fail-on-error: false
 
       # ── Upload raw artefact (HTML log + report for detailed inspection) ───────
