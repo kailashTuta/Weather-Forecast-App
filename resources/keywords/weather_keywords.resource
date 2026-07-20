@@ -66,6 +66,7 @@ Verify Days Selector Navigates Correctly
     [Arguments]    ${days}
     Wait Until Page Contains Element    ${DAYS_SELECTOR_BTNS}    timeout=${STANDARD_WAIT}
     ${btns}=    Get WebElements    ${DAYS_SELECTOR_BTNS}
-    Click Element    ${btns}[${days - 1}]
+    ${index}=    Evaluate    int(${days}) - 1
+    Click Element    ${btns}[${index}]
     Wait For Spinner To Disappear
     Forecast URL Should Contain Days    ${days}

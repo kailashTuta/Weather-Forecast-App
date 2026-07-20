@@ -19,10 +19,14 @@ class WeatherAPILibrary:
 
     def __init__(self):
         self._api_key = os.environ.get("REACT_APP_WEATHER_API_KEY", "")
+
+    def _get_api_key(self) -> str:
+        """Return the API key, raising at keyword-call time if it is not set."""
         if not self._api_key:
             raise RuntimeError(
                 "Environment variable REACT_APP_WEATHER_API_KEY is not set."
             )
+        return self._api_key
 
     # ------------------------------------------------------------------
     # Forecast endpoint
@@ -37,7 +41,7 @@ class WeatherAPILibrary:
         - ``days`` — number of forecast days (1–3)
         """
         url = f"{self.BASE_URL}/forecast.json"
-        params = {"key": self._api_key, "q": city, "days": days}
+        params = {"key": self._get_api_key(), "q": city, "days": days}
         response = requests.get(url, params=params, timeout=15)
         return response
 
@@ -67,7 +71,7 @@ class WeatherAPILibrary:
         - ``city`` — city name
         """
         url = f"{self.BASE_URL}/current.json"
-        params = {"key": self._api_key, "q": city}
+        params = {"key": self._get_api_key(), "q": city}
         response = requests.get(url, params=params, timeout=15)
         return response
 
