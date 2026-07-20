@@ -7,7 +7,7 @@ Resource         ../pages/forecast_page.resource
 Resource         ../pages/navigation.resource
 Resource         ../variables/common_variables.resource
 Library          SeleniumLibrary
-Library          ../../libraries/WeatherAPILibrary
+Library          WeatherAPILibrary
 
 *** Keywords ***
 

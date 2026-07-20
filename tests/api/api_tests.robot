@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation    API tests — validate weatherapi.com responses directly without a browser.
 ...              Tests confirm HTTP status, response structure, and data integrity.
-Library          ../../libraries/WeatherAPILibrary
+Library          WeatherAPILibrary
 Resource         ../../resources/variables/common_variables.resource
 Test Tags        api
 
