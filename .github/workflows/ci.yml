@@ -2,9 +2,9 @@ name: Weather Forecast App — CI/CD
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["bob"]
   pull_request:
-    branches: ["main", "develop"]
+    branches: ["bob"]
   workflow_dispatch:
 
 env:
