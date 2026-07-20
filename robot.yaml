@@ -1,0 +1,11 @@
+# Robot Framework execution profile
+# Run all tests:    robot tests/
+# Run in parallel:  pabot --processes 4 tests/
+# Run by tag:       robot --include smoke tests/
+
+*** Settings ***
+outputdir: reports
+loglevel: INFO
+
+*** Variables ***
+BROWSER: chrome
