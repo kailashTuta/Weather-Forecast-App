@@ -12,5 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install amazon.aws collection
+        run: ansible-galaxy collection install amazon.aws
+
       - name: Run Ansible playbook
         run: ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml ansible/playbook.yml
