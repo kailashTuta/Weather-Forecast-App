@@ -31,10 +31,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -56,7 +56,7 @@ jobs:
         run: npm run build
 
       - name: Upload build artefact
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: react-build
           path: react-app/build/
@@ -74,10 +74,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -87,7 +87,7 @@ jobs:
         run: pip install --upgrade pip && pip install -r requirements.txt
 
       - name: Install Chrome and ChromeDriver
-        uses: browser-actions/setup-chrome@v1.7.2
+        uses: browser-actions/setup-chrome@latest
         with:
           chrome-version: stable
 
@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload dry-run reports
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: dryrun-reports
           path: reports/
@@ -154,11 +154,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       # ── Download the pre-built React bundle ──────────────────────────────────
       - name: Download React build artefact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v4
         with:
           name: react-build
           path: react-app/build/
@@ -166,7 +166,7 @@ jobs:
       # ── Start the React app (browser suites only) ────────────────────────────
       - name: Set up Node.js ${{ env.NODE_VERSION }}
         if: matrix.suite.browser_required
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -212,7 +212,7 @@ jobs:
 
       # ── Python + Robot Framework ─────────────────────────────────────────────
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -224,11 +224,14 @@ jobs:
       # ── Chrome (browser suites only) ─────────────────────────────────────────
       - name: Install Chrome and ChromeDriver
         if: matrix.suite.browser_required
-        uses: browser-actions/setup-chrome@v1.7.2
+        uses: browser-actions/setup-chrome@latest
         with:
           chrome-version: stable
 
       # ── Execute tests ────────────────────────────────────────────────────────
+      # --xunit emits a proper JUnit-compatible XML that dorny/test-reporter understands.
+      # --nostatusrc prevents robot from returning exit code 252 when all tests pass
+      # but no tests match the tag (treated as warning, not error).
       - name: Run ${{ matrix.suite.name }}
         env:
           DISPLAY: ":99"
@@ -238,25 +241,27 @@ jobs:
             --log        log_${{ matrix.suite.tag }}.html \
             --report     report_${{ matrix.suite.tag }}.html \
             --output     output_${{ matrix.suite.tag }}.xml \
+            --xunit      xunit_${{ matrix.suite.tag }}.xml \
             --include    ${{ matrix.suite.tag }} \
             --variable   BROWSER:headlesschrome \
             --pythonpath libraries \
             ${{ matrix.suite.dir }}/
 
       # ── Publish Robot results as a GitHub Check (visible in the UI) ──────────
+      # Uses the JUnit-format xunit file produced by --xunit above.
       - name: Publish test results — ${{ matrix.suite.name }}
         if: always()
-        uses: dorny/test-reporter@v1.9.1
+        uses: dorny/test-reporter@v1
         with:
           name: "Robot Results — ${{ matrix.suite.name }}"
-          path: reports/${{ matrix.suite.tag }}/output_${{ matrix.suite.tag }}.xml
+          path: reports/${{ matrix.suite.tag }}/xunit_${{ matrix.suite.tag }}.xml
           reporter: java-junit
           fail-on-error: false
 
       # ── Upload raw artefact (HTML log + report for detailed inspection) ───────
       - name: Upload test reports — ${{ matrix.suite.name }}
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: robot-report-${{ matrix.suite.tag }}
           path: reports/${{ matrix.suite.tag }}/
@@ -280,10 +285,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -291,22 +296,24 @@ jobs:
         run: pip install robotframework
 
       - name: Download all Robot report artefacts
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v4
         with:
           pattern: robot-report-*
           path: reports/all/
           merge-multiple: false
 
-      # Each artefact unpacks into reports/all/robot-report-<tag>/reports/<tag>/
-      # Find all output XMLs regardless of nesting depth.
+      # Find all output XMLs at any nesting depth under the download directory.
       - name: Merge output XMLs with rebot
         run: |
           mapfile -t xmls < <(find reports/all -name "output_*.xml")
           if [ ${#xmls[@]} -eq 0 ]; then
             echo "No output XMLs found — skipping merge"
+            mkdir -p reports/combined
+            echo "<html><body>No test results available.</body></html>" > reports/combined/combined_report.html
             exit 0
           fi
           python -m robot.rebot \
+            --nostatusrc \
             --outputdir reports/combined \
             --log     combined_log.html \
             --report  combined_report.html \
@@ -316,7 +323,7 @@ jobs:
 
       - name: Upload combined report
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: robot-combined-report
           path: reports/combined/
