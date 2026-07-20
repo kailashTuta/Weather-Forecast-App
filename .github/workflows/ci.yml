@@ -246,16 +246,72 @@ jobs:
             --pythonpath libraries \
             ${{ matrix.suite.dir }}/
 
-      # ── Convert Robot output.xml → JUnit XML for dorny/test-reporter ─────────
-      # dorny/test-reporter@v1 only supports java-junit, not robot-framework.
-      # robot.rebot --xunit produces a valid JUnit XML from the Robot output.
-      - name: Convert Robot output to JUnit XML — ${{ matrix.suite.name }}
+      # ── Convert Robot output.xml → flat JUnit XML for dorny/test-reporter ────
+      # rebot --xunit nests <testcase> inside two levels of <testsuite> which
+      # dorny/test-reporter skips. This script flattens them so all <testcase>
+      # elements are direct children of a single root <testsuite>.
+      - name: Convert Robot output to flat JUnit XML — ${{ matrix.suite.name }}
         if: always()
         run: |
-          python -m robot.rebot \
-            --nostatusrc \
-            --xunit reports/${{ matrix.suite.tag }}/junit_${{ matrix.suite.tag }}.xml \
-            reports/${{ matrix.suite.tag }}/output_${{ matrix.suite.tag }}.xml
+          python - <<'EOF'
+          import xml.etree.ElementTree as ET, sys, os
+
+          tag   = "${{ matrix.suite.tag }}"
+          src   = f"reports/{tag}/output_{tag}.xml"
+          dst   = f"reports/{tag}/junit_{tag}.xml"
+
+          if not os.path.exists(src):
+              print(f"Source not found: {src}")
+              sys.exit(0)
+
+          tree = ET.parse(src)
+          root = tree.getroot()
+
+          testcases  = []
+          total = passed = failed = skipped = elapsed = 0
+
+          def walk(node):
+              global total, passed, failed, skipped, elapsed
+              if node.tag == "test":
+                  status_el = node.find("status")
+                  status    = status_el.get("status", "FAIL") if status_el is not None else "FAIL"
+                  time_sec  = float(status_el.get("elapsed", "0")) if status_el is not None else 0.0
+                  suite_path = node.get("id", "").rsplit("-", 1)[0].replace("-", ".")
+                  classname  = f"{tag}.{suite_path}" if suite_path else tag
+                  tc = ET.Element("testcase",
+                      name=node.get("name", "unknown"),
+                      classname=classname,
+                      time=f"{time_sec:.3f}")
+                  if status == "FAIL":
+                      msg = status_el.get("message", "") if status_el is not None else ""
+                      ET.SubElement(tc, "failure", message=msg, type="AssertionError")
+                      failed += 1
+                  elif status == "SKIP":
+                      ET.SubElement(tc, "skipped")
+                      skipped += 1
+                  else:
+                      passed += 1
+                  total  += 1
+                  elapsed += time_sec
+                  testcases.append(tc)
+              for child in node:
+                  walk(child)
+
+          walk(root)
+
+          suite = ET.Element("testsuite",
+              name=tag,
+              tests=str(total),
+              failures=str(failed),
+              errors="0",
+              skipped=str(skipped),
+              time=f"{elapsed:.3f}")
+          for tc in testcases:
+              suite.append(tc)
+
+          ET.ElementTree(suite).write(dst, encoding="unicode", xml_declaration=True)
+          print(f"Written {total} test cases ({passed} passed, {failed} failed, {skipped} skipped) to {dst}")
+          EOF
 
       # ── Publish results as a GitHub Check (visible in the UI) ────────────────
       - name: Publish test results — ${{ matrix.suite.name }}
