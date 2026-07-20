@@ -20,7 +20,7 @@ concurrency:
 jobs:
   terraform:
     name: Terraform Init, Plan & Apply
-    runs-on: [self-hosted, Agent-1]
+    runs-on: [self-hosted, Linux, X64]
 
     defaults:
       run:
