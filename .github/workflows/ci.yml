@@ -16,6 +16,9 @@ env:
   NODE_VERSION: "20"
   PYTHON_VERSION: "3.11"
   APP_PORT: 3000
+  # Suppress the Node 20 deprecation warning from actions that have not yet
+  # shipped a Node 24 runtime internally (checkout, setup-node, etc.).
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 — Build & unit-test the React application
@@ -229,9 +232,6 @@ jobs:
           chrome-version: stable
 
       # ── Execute tests ────────────────────────────────────────────────────────
-      # --xunit emits a proper JUnit-compatible XML that dorny/test-reporter understands.
-      # --nostatusrc prevents robot from returning exit code 252 when all tests pass
-      # but no tests match the tag (treated as warning, not error).
       - name: Run ${{ matrix.suite.name }}
         env:
           DISPLAY: ":99"
@@ -241,20 +241,85 @@ jobs:
             --log        log_${{ matrix.suite.tag }}.html \
             --report     report_${{ matrix.suite.tag }}.html \
             --output     output_${{ matrix.suite.tag }}.xml \
-            --xunit      xunit_${{ matrix.suite.tag }}.xml \
             --include    ${{ matrix.suite.tag }} \
             --variable   BROWSER:headlesschrome \
             --pythonpath libraries \
             ${{ matrix.suite.dir }}/
 
-      # ── Publish Robot results as a GitHub Check (visible in the UI) ──────────
-      # Uses the JUnit-format xunit file produced by --xunit above.
+      # ── Convert Robot output.xml → flat JUnit XML for dorny/test-reporter ────
+      # rebot --xunit nests <testcase> inside two levels of <testsuite> which
+      # dorny/test-reporter skips. This script flattens them so all <testcase>
+      # elements are direct children of a single root <testsuite>.
+      - name: Convert Robot output to flat JUnit XML — ${{ matrix.suite.name }}
+        if: always()
+        run: |
+          python - <<'EOF'
+          import xml.etree.ElementTree as ET, sys, os
+
+          tag   = "${{ matrix.suite.tag }}"
+          src   = f"reports/{tag}/output_{tag}.xml"
+          dst   = f"reports/{tag}/junit_{tag}.xml"
+
+          if not os.path.exists(src):
+              print(f"Source not found: {src}")
+              sys.exit(0)
+
+          tree = ET.parse(src)
+          root = tree.getroot()
+
+          testcases  = []
+          total = passed = failed = skipped = elapsed = 0
+
+          def walk(node):
+              global total, passed, failed, skipped, elapsed
+              if node.tag == "test":
+                  status_el = node.find("status")
+                  status    = status_el.get("status", "FAIL") if status_el is not None else "FAIL"
+                  time_sec  = float(status_el.get("elapsed", "0")) if status_el is not None else 0.0
+                  suite_path = node.get("id", "").rsplit("-", 1)[0].replace("-", ".")
+                  classname  = f"{tag}.{suite_path}" if suite_path else tag
+                  tc = ET.Element("testcase",
+                      name=node.get("name", "unknown"),
+                      classname=classname,
+                      time=f"{time_sec:.3f}")
+                  if status == "FAIL":
+                      msg = status_el.get("message", "") if status_el is not None else ""
+                      ET.SubElement(tc, "failure", message=msg, type="AssertionError")
+                      failed += 1
+                  elif status == "SKIP":
+                      ET.SubElement(tc, "skipped")
+                      skipped += 1
+                  else:
+                      passed += 1
+                  total  += 1
+                  elapsed += time_sec
+                  testcases.append(tc)
+              for child in node:
+                  walk(child)
+
+          walk(root)
+
+          suite = ET.Element("testsuite",
+              name=tag,
+              tests=str(total),
+              failures=str(failed),
+              errors="0",
+              skipped=str(skipped),
+              time=f"{elapsed:.3f}")
+          for tc in testcases:
+              suite.append(tc)
+
+          ET.ElementTree(suite).write(dst, encoding="unicode", xml_declaration=True)
+          print(f"Written {total} test cases ({passed} passed, {failed} failed, {skipped} skipped) to {dst}")
+          EOF
+
+      # ── Publish results as a GitHub Check (visible in the UI) ────────────────
       - name: Publish test results — ${{ matrix.suite.name }}
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: "Robot Results — ${{ matrix.suite.name }}"
-          path: reports/${{ matrix.suite.tag }}/xunit_${{ matrix.suite.tag }}.xml
+          path: reports/${{ matrix.suite.tag }}/junit_${{ matrix.suite.tag }}.xml
           reporter: java-junit
           fail-on-error: false
 
@@ -303,22 +368,27 @@ jobs:
           merge-multiple: false
 
       # Find all output XMLs at any nesting depth under the download directory.
-      - name: Merge output XMLs with rebot
+      # NOTE: --merge is intentionally omitted. --merge requires all input XMLs
+      # to share the same root suite name. Our four suites have different names
+      # (Api, Smoke, Regression, Negative), so rebot without --merge simply
+      # concatenates them as sibling suites under a single combined top-level suite.
+      - name: Combine output XMLs with rebot
         run: |
-          mapfile -t xmls < <(find reports/all -name "output_*.xml")
+          mapfile -t xmls < <(find reports/all -name "output_*.xml" | sort)
+          echo "Found ${#xmls[@]} output XML(s): ${xmls[*]}"
           if [ ${#xmls[@]} -eq 0 ]; then
-            echo "No output XMLs found — skipping merge"
+            echo "No output XMLs found — skipping combine"
             mkdir -p reports/combined
             echo "<html><body>No test results available.</body></html>" > reports/combined/combined_report.html
             exit 0
           fi
           python -m robot.rebot \
             --nostatusrc \
+            --name    "Weather Forecast — All Suites" \
             --outputdir reports/combined \
             --log     combined_log.html \
             --report  combined_report.html \
             --output  combined_output.xml \
-            --merge \
             "${xmls[@]}"
 
       - name: Upload combined report
