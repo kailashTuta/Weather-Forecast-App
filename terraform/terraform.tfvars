@@ -1,7 +1,7 @@
 aws_region        = "ap-south-1"
-instance_name     = "my-ec2-instance"
+instance_name     = "weather-forecast-app"
 ami_id            = "ami-0b910d1016287a5e7"
-instance_type     = "t2.micro"
+instance_type     = "t3.micro"
 key_name          = "Docker-RSA"
 security_group_id = "sg-055c83ba66680b4bb"
 

@@ -1,3 +1,15 @@
+# Open port 80 (HTTP) inbound from the internet on the existing security group.
+# Without this rule the container is running but unreachable from a browser.
+resource "aws_security_group_rule" "allow_http" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = var.security_group_id
+  description       = "Allow inbound HTTP traffic to the weather-forecast-app"
+}
+
 resource "aws_instance" "this" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
