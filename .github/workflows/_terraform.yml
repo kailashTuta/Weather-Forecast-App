@@ -1,12 +1,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Reusable workflow — Terraform init, plan, and apply.
+# Reusable workflow — Terraform init, plan, and apply/destroy.
 #
-# Called by: ci.yml
+# Called by: ci.yml  (action always = "apply")
+# Called by: terraform.yml  (action chosen by operator at dispatch time)
 # ─────────────────────────────────────────────────────────────────────────────
 name: _terraform
 
 on:
   workflow_call:
+    inputs:
+      action:
+        description: "Terraform action to run: apply or destroy"
+        type: string
+        default: "apply"
 
 concurrency:
   group: terraform-${{ github.ref }}
@@ -14,7 +20,7 @@ concurrency:
 
 jobs:
   terraform:
-    name: "Terraform Init, Plan & Apply"
+    name: "Terraform Init, Plan & ${{ inputs.action == 'destroy' && 'Destroy' || 'Apply' }}"
     runs-on: [self-hosted, Linux, X64]
 
     defaults:
@@ -29,7 +35,17 @@ jobs:
         run: terraform init -input=false
 
       - name: Terraform Plan
+        if: inputs.action != 'destroy'
         run: terraform plan -input=false -out=tfplan -var-file=terraform.tfvars
 
       - name: Terraform Apply
+        if: inputs.action != 'destroy'
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Terraform Plan (destroy)
+        if: inputs.action == 'destroy'
+        run: terraform plan -destroy -input=false -out=tfplan -var-file=terraform.tfvars
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
         run: terraform apply -input=false -auto-approve tfplan

@@ -5,13 +5,25 @@
 #
 # This file is kept only as a manual escape-hatch so that Terraform can
 # still be triggered in isolation via workflow_dispatch when needed.
+# The operator is prompted to choose "apply" or "destroy" at dispatch time.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Terraform IaC (standalone)
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action to run"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 jobs:
   terraform:
-    name: "Terraform Init, Plan & Apply"
+    name: "Terraform Init, Plan & ${{ inputs.action == 'destroy' && 'Destroy' || 'Apply' }}"
     uses: ./.github/workflows/_terraform.yml
+    with:
+      action: ${{ inputs.action }}

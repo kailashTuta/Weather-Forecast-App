@@ -46,6 +46,8 @@ jobs:
     name: "Terraform"
     needs: docker
     uses: ./.github/workflows/_terraform.yml
+    with:
+      action: apply
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 4 — Ansible deployment
