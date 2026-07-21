@@ -8,6 +8,11 @@ name: _ansible
 
 on:
   workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
 
 jobs:
   ansible:
@@ -24,4 +29,7 @@ jobs:
           ansible-galaxy collection install community.docker
 
       - name: Run Ansible playbook
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml ansible/playbook.yml

@@ -54,3 +54,6 @@ jobs:
     name: "Ansible"
     needs: terraform
     uses: ./.github/workflows/_ansible.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
