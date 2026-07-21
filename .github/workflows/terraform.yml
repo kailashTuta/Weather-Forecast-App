@@ -1,30 +1,17 @@
-name: Terraform IaC
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow has been refactored into a reusable workflow.
+# The logic now lives in .github/workflows/_terraform.yml and is called
+# by the main CI/CD pipeline in .github/workflows/ci.yml.
+#
+# This file is kept only as a manual escape-hatch so that Terraform can
+# still be triggered in isolation via workflow_dispatch when needed.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Terraform IaC (standalone)
 
 on:
   workflow_dispatch:
 
-concurrency:
-  group: terraform-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   terraform:
-    name: Terraform Init, Plan & Apply
-    runs-on: [self-hosted, Linux, X64]
-
-    defaults:
-      run:
-        working-directory: terraform
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan -var-file=terraform.tfvars
-
-      - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve tfplan
+    name: "Terraform Init, Plan & Apply"
+    uses: ./.github/workflows/_terraform.yml

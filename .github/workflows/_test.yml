@@ -1,0 +1,384 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable workflow — Build React app, validate and execute Robot Framework
+# tests, then publish a combined report.
+#
+# Called by: ci.yml
+# ─────────────────────────────────────────────────────────────────────────────
+name: _test
+
+on:
+  workflow_call:
+    secrets:
+      REACT_APP_WEATHER_API_KEY:
+        required: true
+
+env:
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.11"
+  APP_PORT: 3000
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: read
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1 — Build React application
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  build-react-app:
+    name: "Build React App"
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: react-app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: react-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run React unit tests
+        env:
+          CI: true
+          REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
+        run: npm test -- --watchAll=false --passWithNoTests
+
+      - name: Build production bundle
+        env:
+          CI: false
+          REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
+        run: npm run build
+
+      - name: Upload build artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: react-app/build/
+          retention-days: 3
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2 — Validate Robot Framework project (dry-run)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-test-automation:
+    name: "Build Test Automation Framework"
+    runs-on: ubuntu-latest
+    needs: build-react-app
+    env:
+      REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Install Chrome and ChromeDriver
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Validate Robot Framework resource files (dry-run)
+        run: |
+          python -m robot \
+            --dryrun \
+            --nostatusrc \
+            --pythonpath libraries \
+            --outputdir reports/dryrun \
+            --include smoke \
+            --include regression \
+            --include negative \
+            tests/
+
+      - name: Validate Robot Framework API tests (dry-run)
+        run: |
+          python -m robot \
+            --dryrun \
+            --nostatusrc \
+            --pythonpath libraries \
+            --outputdir reports/dryrun-api \
+            tests/api/
+
+      - name: Upload dry-run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dryrun-reports
+          path: reports/
+          retention-days: 3
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 3 — Execute tests (matrix: api / smoke / regression / negative)
+# ─────────────────────────────────────────────────────────────────────────────
+  execute-tests:
+    name: "Execute Test Cases — ${{ matrix.suite.name }}"
+    runs-on: ubuntu-latest
+    needs: [build-react-app, build-test-automation]
+    env:
+      REACT_APP_WEATHER_API_KEY: ${{ secrets.REACT_APP_WEATHER_API_KEY }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - name: "API Tests"
+            tag: "api"
+            dir: "tests/api"
+            browser_required: false
+          - name: "Smoke Tests"
+            tag: "smoke"
+            dir: "tests/smoke"
+            browser_required: true
+          - name: "Regression Tests"
+            tag: "regression"
+            dir: "tests/regression"
+            browser_required: true
+          - name: "Negative Tests"
+            tag: "negative"
+            dir: "tests/negative"
+            browser_required: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download React build artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: react-app/build/
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        if: matrix.suite.browser_required
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install serve
+        if: matrix.suite.browser_required
+        run: npm install -g serve
+
+      - name: Start React app (background)
+        if: matrix.suite.browser_required
+        run: |
+          nohup serve -s react-app/build -l ${{ env.APP_PORT }} \
+            > /tmp/serve.log 2>&1 &
+          echo $! > /tmp/serve.pid
+          echo "React app PID $(cat /tmp/serve.pid) — serving on port ${{ env.APP_PORT }}"
+
+      - name: Wait for React app to be ready
+        if: matrix.suite.browser_required
+        run: |
+          echo "Polling http://localhost:${{ env.APP_PORT }} …"
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:${{ env.APP_PORT }} > /dev/null 2>&1; then
+              echo "✓ App is ready (attempt $i)"
+              exit 0
+            fi
+            echo "  attempt $i — not ready yet, waiting 2 s …"
+            sleep 2
+          done
+          echo "✗ App did not start within 60 s"
+          cat /tmp/serve.log
+          exit 1
+
+      - name: Start Xvfb virtual display
+        if: matrix.suite.browser_required
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1920x1080x24 -ac &
+          echo $! > /tmp/xvfb.pid
+          for i in $(seq 1 15); do
+            [ -e /tmp/.X11-unix/X99 ] && echo "✓ Xvfb ready" && break
+            sleep 1
+          done
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Install Chrome and ChromeDriver
+        if: matrix.suite.browser_required
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Run ${{ matrix.suite.name }}
+        env:
+          DISPLAY: ":99"
+        run: |
+          python -m robot \
+            --outputdir  reports/${{ matrix.suite.tag }} \
+            --log        log_${{ matrix.suite.tag }}.html \
+            --report     report_${{ matrix.suite.tag }}.html \
+            --output     output_${{ matrix.suite.tag }}.xml \
+            --include    ${{ matrix.suite.tag }} \
+            --variable   BROWSER:headlesschrome \
+            --pythonpath libraries \
+            ${{ matrix.suite.dir }}/
+
+      - name: Convert Robot output to flat JUnit XML — ${{ matrix.suite.name }}
+        if: always()
+        run: |
+          python - <<'EOF'
+          import xml.etree.ElementTree as ET, sys, os
+
+          tag   = "${{ matrix.suite.tag }}"
+          src   = f"reports/{tag}/output_{tag}.xml"
+          dst   = f"reports/{tag}/junit_{tag}.xml"
+
+          if not os.path.exists(src):
+              print(f"Source not found: {src}")
+              sys.exit(0)
+
+          tree = ET.parse(src)
+          root = tree.getroot()
+
+          testcases  = []
+          total = passed = failed = skipped = elapsed = 0
+
+          def walk(node):
+              global total, passed, failed, skipped, elapsed
+              if node.tag == "test":
+                  status_el = node.find("status")
+                  status    = status_el.get("status", "FAIL") if status_el is not None else "FAIL"
+                  time_sec  = float(status_el.get("elapsed", "0")) if status_el is not None else 0.0
+                  suite_path = node.get("id", "").rsplit("-", 1)[0].replace("-", ".")
+                  classname  = f"{tag}.{suite_path}" if suite_path else tag
+                  tc = ET.Element("testcase",
+                      name=node.get("name", "unknown"),
+                      classname=classname,
+                      time=f"{time_sec:.3f}")
+                  if status == "FAIL":
+                      msg = status_el.get("message", "") if status_el is not None else ""
+                      ET.SubElement(tc, "failure", message=msg, type="AssertionError")
+                      failed += 1
+                  elif status == "SKIP":
+                      ET.SubElement(tc, "skipped")
+                      skipped += 1
+                  else:
+                      passed += 1
+                  total  += 1
+                  elapsed += time_sec
+                  testcases.append(tc)
+              for child in node:
+                  walk(child)
+
+          walk(root)
+
+          suite = ET.Element("testsuite",
+              name=tag,
+              tests=str(total),
+              failures=str(failed),
+              errors="0",
+              skipped=str(skipped),
+              time=f"{elapsed:.3f}")
+          for tc in testcases:
+              suite.append(tc)
+
+          ET.ElementTree(suite).write(dst, encoding="unicode", xml_declaration=True)
+          print(f"Written {total} test cases ({passed} passed, {failed} failed, {skipped} skipped) to {dst}")
+          EOF
+
+      - name: Publish test results — ${{ matrix.suite.name }}
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: "Robot Results — ${{ matrix.suite.name }}"
+          path: reports/${{ matrix.suite.tag }}/junit_${{ matrix.suite.tag }}.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Upload test reports — ${{ matrix.suite.name }}
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-report-${{ matrix.suite.tag }}
+          path: reports/${{ matrix.suite.tag }}/
+          retention-days: 14
+
+      - name: Stop background processes
+        if: always() && matrix.suite.browser_required
+        run: |
+          [ -f /tmp/serve.pid ] && kill $(cat /tmp/serve.pid) 2>/dev/null || true
+          [ -f /tmp/xvfb.pid  ] && kill $(cat /tmp/xvfb.pid)  2>/dev/null || true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 4 — Merge all Robot output XMLs into a single combined report
+# ─────────────────────────────────────────────────────────────────────────────
+  publish-combined-report:
+    name: "Publish Combined Test Report"
+    runs-on: ubuntu-latest
+    needs: execute-tests
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Robot Framework
+        run: pip install robotframework
+
+      - name: Download all Robot report artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: robot-report-*
+          path: reports/all/
+          merge-multiple: false
+
+      - name: Combine output XMLs with rebot
+        run: |
+          mapfile -t xmls < <(find reports/all -name "output_*.xml" | sort)
+          echo "Found ${#xmls[@]} output XML(s): ${xmls[*]}"
+          if [ ${#xmls[@]} -eq 0 ]; then
+            echo "No output XMLs found — skipping combine"
+            mkdir -p reports/combined
+            echo "<html><body>No test results available.</body></html>" > reports/combined/combined_report.html
+            exit 0
+          fi
+          python -m robot.rebot \
+            --nostatusrc \
+            --name    "Weather Forecast — All Suites" \
+            --outputdir reports/combined \
+            --log     combined_log.html \
+            --report  combined_report.html \
+            --output  combined_output.xml \
+            "${xmls[@]}"
+
+      - name: Upload combined report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-combined-report
+          path: reports/combined/
+          retention-days: 30

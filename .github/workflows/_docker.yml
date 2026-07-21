@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable workflow — Build the Docker image from react-app/Dockerfile and
+# push it to Docker Hub.
+#
+# Called by: ci.yml
+# ─────────────────────────────────────────────────────────────────────────────
+name: _docker
+
+on:
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      REACT_APP_WEATHER_API_KEY:
+        required: true
+
+jobs:
+  docker-build-push:
+    name: "Build & Push Docker Image"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build-time arg so the API key is baked into the production bundle
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: react-app
+          file: react-app/Dockerfile
+          push: true
+          tags: kailashtuta/weather-forecast-app:v2
+          build-args: |
+            REACT_APP_WEATHER_API_KEY=${{ secrets.REACT_APP_WEATHER_API_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable workflow — Run the Ansible playbook to provision the EC2 host,
+# pull the Docker image, and start the container.
+#
+# Called by: ci.yml
+# ─────────────────────────────────────────────────────────────────────────────
+name: _ansible
+
+on:
+  workflow_call:
+
+jobs:
+  ansible:
+    name: "Run Ansible Playbook"
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install required Ansible collections
+        run: |
+          ansible-galaxy collection install amazon.aws
+          ansible-galaxy collection install community.docker
+
+      - name: Run Ansible playbook
+        run: ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml ansible/playbook.yml

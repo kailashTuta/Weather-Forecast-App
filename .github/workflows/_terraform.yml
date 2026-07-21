@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable workflow — Terraform init, plan, and apply.
+#
+# Called by: ci.yml
+# ─────────────────────────────────────────────────────────────────────────────
+name: _terraform
+
+on:
+  workflow_call:
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: "Terraform Init, Plan & Apply"
+    runs-on: [self-hosted, Linux, X64]
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out=tfplan -var-file=terraform.tfvars
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve tfplan

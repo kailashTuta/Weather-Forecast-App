@@ -16,30 +16,12 @@
         state: present
 
     # ── Docker ─────────────────────────────────────────────────────────────────
-    - name: Remove old Docker CE repo if present
-      file:
-        path: /etc/yum.repos.d/docker-ce.repo
-        state: absent
-
-    - name: Add Docker CE repository for Amazon Linux 2023
-      shell: |
-        dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-        sed -i 's/$releasever/9/g' /etc/yum.repos.d/docker-ce.repo
-      args:
-        executable: /bin/bash
-
-    - name: Install Docker CE
+    - name: Install Docker
       dnf:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
+        name: docker
         state: present
-        disable_gpg_check: yes
 
-    - name: Start and enable Docker service
+    - name: Enable and start Docker service
       service:
         name: docker
         state: started
@@ -50,3 +32,20 @@
         name: ec2-user
         groups: docker
         append: yes
+
+    # ── App Image ──────────────────────────────────────────────────────────────
+    - name: Pull weather-forecast-app Docker image
+      community.docker.docker_image:
+        name: kailashtuta/weather-forecast-app
+        tag: v2
+        source: pull
+        force_source: yes
+
+    - name: Run weather-forecast-app container
+      community.docker.docker_container:
+        name: weather-forecast-app
+        image: kailashtuta/weather-forecast-app:v2
+        state: started
+        restart_policy: always
+        ports:
+          - "80:3000"

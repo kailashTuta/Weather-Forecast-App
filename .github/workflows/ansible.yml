@@ -1,19 +1,17 @@
-name: Ansible - Install Docker and Git
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow has been refactored into a reusable workflow.
+# The logic now lives in .github/workflows/_ansible.yml and is called
+# by the main CI/CD pipeline in .github/workflows/ci.yml.
+#
+# This file is kept only as a manual escape-hatch so that the Ansible
+# playbook can still be triggered in isolation via workflow_dispatch.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Ansible (standalone)
 
 on:
   workflow_dispatch:
 
 jobs:
   ansible:
-    name: Run Ansible Playbook
-    runs-on: [self-hosted, Linux, X64]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install amazon.aws collection
-        run: ansible-galaxy collection install amazon.aws
-
-      - name: Run Ansible playbook
-        run: ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml ansible/playbook.yml
+    name: "Run Ansible Playbook"
+    uses: ./.github/workflows/_ansible.yml
